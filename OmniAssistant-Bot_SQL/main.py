@@ -143,7 +143,7 @@ async def cmd_weight(message:types.Message, command: CommandObject):
     today = date.today() # получаем текущую дату
 
     if command.args:
-        weight = command.args.strip() # command.args будет равен весу
+        weight = float(command.args.strip()) # command.args будет равен весу
         await cmd.edit_text(f'Ваш вес {weight}кг успешно сохранен!')
     
     else:
@@ -159,6 +159,30 @@ async def cmd_weight(message:types.Message, command: CommandObject):
 
     await message.answer(f'Ваши записанные данные;\n {text}') # выводим данные пользователю
         
+    
+    async def diff_weight():
+        cursor.execute("SELECT weight FROM weight ORDER BY rowid DESC LIMIT 2") 
+        rows = cursor.fetchall() # берем вес из таблицы только 2 последних только что и перед этим
+        
+        if (len(rows) > 1):
+            current_w = rows[0][0]  # Последний введенный
+            previous_w = rows[1][0] # Предпоследний
+            diff = round(current_w - previous_w, 2)
+
+            if (diff > 0):
+                await message.answer(f'Набор + {diff}кг')
+
+            elif (diff < 0):
+                await message.answer(f'Сброс - {diff}кг')
+
+            else: 
+                await message.answer('Вес стабилен')
+
+        else:
+            await message.answer('Это ваша первая запись, нужно хотя-бы 2.')
+
+    await diff_weight() # вызываем функцию diff
+
 
 
 async def main():
