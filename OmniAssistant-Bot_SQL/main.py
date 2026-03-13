@@ -131,6 +131,24 @@ async def cmd_check(message: types.Message):
     
     await message.answer(text, parse_mode="Markdown", disable_web_page_preview=True)
 
+    builder = InlineKeyboardBuilder()
+    builder.row(types.InlineKeyboardButton(
+        text= 'Удалить трек', # создаем кнопку delete
+        callback_data= 'delete'
+    ))
+
+    await message.answer(
+        'Чтобы удалить трек нажмите на кнопку ниже',
+        reply_markup=builder.as_markup()
+                         )
+
+@dp.callback_query(F.data == 'delete')
+async def callback_delete(callback: types.CallbackQuery):
+
+    await callback.message.answer(
+        'Введите название песни которую хотите удалить', # если кнопка delete нажата выводим сообщение 
+    )
+
 
 @dp.message(F.text & ~F.text.startswith('/'))
 async def echo_search(message: types.Message):
@@ -202,13 +220,21 @@ async def cmd_weight(message:types.Message, command: CommandObject):
         )
     await general_information_weight() 
 
-    @dp.callback_query(F.data == 'общая информация о весе')
-    async def callback_info(callback: types.CallbackQuery):
+@dp.callback_query(F.data == 'общая информация о весе')
+async def callback_info(callback: types.CallbackQuery,):
+    user_id = callback.from_user.id
 
+    cursor.execute("SELECT data, weight FROM weight WHERE users_id = ? ORDER BY rowid DESC LIMIT 1", (user_id,))
+    row = cursor.fetchone()
+
+    if (row):
         await callback.message.answer(
-            f'Общая статистика:\n\n {user_id}\n {todays}\n {weight}\n' # Если пользователь нажал на кнопку выводим статистику
+            f'Общая статистика:\n\n айди - {user_id}\n дата - {row[0]}\n вес - {row[1]}\n' # Если пользователь нажал на кнопку выводим статистику
         )
-    callback_info()
+    else:
+        await callback.message.answer('У вас пока что нету записей о весе.')
+
+    await callback.answer()
 
 class Start():
     async def main():
