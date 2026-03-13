@@ -35,7 +35,8 @@ class Table_SQL():
 
     cursor.execute("""CREATE TABLE IF NOT EXISTS weight(
         data INTEGER,
-        weight FLOAT
+        weight FLOAT,
+        users_id INTEGER
     )""")
     connect.commit()
 
@@ -142,6 +143,8 @@ async def cmd_weight(message:types.Message, command: CommandObject):
 
     cmd = await message.answer('Впишите свой вес!') # просим пользователя вписать свой вес 
     today = date.today() # получаем текущую дату
+    user_id = message.from_user.id # update: добавил запись id пользователя в таблицу 
+
     try:
         if command.args:
             weight = float(command.args.strip()) # command.args будет равен весу
@@ -152,14 +155,15 @@ async def cmd_weight(message:types.Message, command: CommandObject):
     except:
         await message.answer('Ошибка! Вводите только цифры.') # если пользователь вводит текст в строке для веса выводим ошибку 
 
-    cursor.execute("INSERT INTO weight (data, weight) VALUES (?,?)",
-                   (today,weight)) # Вводим данные в таблицу
+    cursor.execute("INSERT INTO weight (data, weight, users_id) VALUES (?,?,?)",
+                   (today,weight,user_id)) # Вводим данные в таблицу
     
     cursor.execute("SELECT * FROM weight")
     rows = cursor.fetchall() # получаем данные с таблицы
     for row in rows:
         todays = f'дата - {row[0]}'
         weight = f'вес - {row[1]}' # берем по отдельности вес и дату для удобства
+        user_id = f'id - {row[2]}'
 
 
     async def diff_weight():
@@ -185,6 +189,26 @@ async def cmd_weight(message:types.Message, command: CommandObject):
 
     await diff_weight() # вызываем функцию diff
 
+    async def general_information_weight():
+        builder = InlineKeyboardBuilder()
+        builder.row(types.InlineKeyboardButton(
+            text= 'Общая информация о весе',
+            callback_data= 'общая информация о весе' # кнопка которая покажет общую статистику
+        ))
+
+        await message.answer(
+            'Нажмите на кнопку ниже для\n просмотра общей статистику веса',
+            reply_markup=builder.as_markup() # текст над кнопкой
+        )
+    await general_information_weight() 
+
+    @dp.callback_query(F.data == 'общая информация о весе')
+    async def callback_info(callback: types.CallbackQuery):
+
+        await callback.message.answer(
+            f'Общая статистика:\n\n {user_id}\n {todays}\n {weight}\n' # Если пользователь нажал на кнопку выводим статистику
+        )
+    callback_info()
 
 class Start():
     async def main():
