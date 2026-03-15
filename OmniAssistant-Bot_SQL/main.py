@@ -27,6 +27,7 @@ class Table_SQL():
     )""")
 
     cursor.execute("""CREATE TABLE IF NOT EXISTS music(
+        track_id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
         title TEXT, 
         link TEXT
@@ -118,36 +119,41 @@ async def save_to_db(callback: types.CallbackQuery):
 @dp.message(Command('check'))
 async def cmd_check(message: types.Message):
     user_id = message.from_user.id
-    cursor.execute('SELECT title, link FROM music WHERE user_id = ?', (user_id,))
+    cursor.execute('SELECT track_id, title, link FROM music WHERE user_id = ?', (user_id,))
     rows = cursor.fetchall()
 
     if not rows:
         await message.answer("📭 Твой плейлист пуст!")
         return
 
-    text = "📂 **Твои сохраненные треки:**\n\n"
-    for i, row in enumerate(rows, 1):
-        text += f"{i}. [{row[0]}]({row[1]})\n" # выводим в более адекватном формате 
-    
-    await message.answer(text, parse_mode="Markdown", disable_web_page_preview=True)
+    await message.answer("📂 **Твои сохраненные треки:**\n\n")
+    for row in rows:
+        track_id = row[0]
+        title = row[1] # получаем айди каждого элемента 
+        link = row[2]
 
-    builder = InlineKeyboardBuilder()
-    builder.row(types.InlineKeyboardButton(
-        text= 'Удалить трек', # создаем кнопку delete
-        callback_data= 'delete'
-    ))
+        builder = InlineKeyboardBuilder()
+        builder.row(types.InlineKeyboardButton(
+            text= f'Удалить трек {title}', # создаем кнопку delete
+            callback_data= f'del_{track_id}') # передаем айди трека чтобы мы потом могли узнать его в переменной track_id 
+            )
 
-    await message.answer(
-        'Чтобы удалить трек нажмите на кнопку ниже',
-        reply_markup=builder.as_markup()
-                         )
+        await message.answer(
+            'Чтобы удалить трек нажмите на кнопку ниже',
+            reply_markup=builder.as_markup()
+        )
 
-@dp.callback_query(F.data == 'delete')
+@dp.callback_query(F.data.startswith('del_'))
 async def callback_delete(callback: types.CallbackQuery):
 
-    await callback.message.answer(
-        'Введите название песни которую хотите удалить', # если кнопка delete нажата выводим сообщение 
-    )
+    track_id = callback.data.split('_')[1] # берем только айди трека из кнопки  
+    user_id = callback.from_user.id
+
+    cursor.execute("DELETE FROM music WHERE track_id = ? AND user_id = ?", (int(track_id), user_id)) # удаляем трек по айди 
+    connect.commit()
+    
+    await callback.answer("Удалено!")
+    await callback.message.delete()
 
 
 @dp.message(F.text & ~F.text.startswith('/'))
