@@ -13,6 +13,8 @@ from handlers.start import router as cmd_start
 from handlers.search import router as search
 from handlers.stats import router as weight
 from handlers.command import router as command
+from handlers.save_message import router as save_message
+from handlers.clearJson import router as clearJson
 
 load_dotenv()
 BOT_TOKEN = os.getenv('BOT_TOKEN') # подключаем токен бота
@@ -29,6 +31,8 @@ async def main():
     dp.include_router(search)
     dp.include_router(weight)
     dp.include_router(command)
+    dp.include_router(save_message)
+    dp.include_router(clearJson)
 
     print("Бот запущен!")
     await dp.start_polling(bot) # запускаем бота
