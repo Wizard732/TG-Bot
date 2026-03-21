@@ -7,6 +7,14 @@ router = Router()
 failname = 'messageUser.json'
 message_list = []
 
+def clear_json_logic(filename):
+    try:
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump([], f)
+        return True
+    except Exception:
+        return False
+
 @router.message(Command('clear'))
 async def clear_list(message:types.Message):
     await message.answer('Воспользуйтесь командой (clear) для очистки списка ')
